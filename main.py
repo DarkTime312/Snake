@@ -4,10 +4,6 @@ from random import randint
 import logging
 from util import LimitedList
 
-# logging.disable()
-# Set up logging
-logging.basicConfig(filename='log.txt', level=logging.DEBUG, format='%(asctime)s - %(message)s')
-
 
 class Snake(ctk.CTk):
     def __init__(self):
@@ -30,27 +26,30 @@ class Snake(ctk.CTk):
         # Set the initial refresh speed for the snake's movement
         self.refresh_speed = 250
         # Set the initial length of the snake's tail
-        self.snake_tail_length = 2
+        self.snake_tail_length = 3
 
         # Initialize the starting position of the snake's head
         self.row = START_POS[1]
         self.column = START_POS[0]
         # Create a limited list to store the snake's body parts
-        self.body_list = LimitedList(2)
+        self.body_positions = LimitedList(3)
+        self.body_objects = []
 
         # Create the snake's head frame and place it on the grid
         self.snake_head = ctk.CTkFrame(self, fg_color=SNAKE_HEAD_COLOR, corner_radius=0)
-        self.snake_head.grid(row=self.row, column=self.column)
 
         # Add initial body parts to the snake's body list
-        self.body_list.add((self.row, self.column - 2, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
-        self.body_list.add((self.row, self.column - 1, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
+        self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
+        self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
 
-        # Log the initial positions of the snake's body parts
-        logging.debug("Initial body parts:")
-        for row, column, body_part in self.body_list:
-            logging.debug(f"Body part at row {row}, column {column}")
-            body_part.grid(row=row, column=column)
+        self.body_positions.add((self.row, self.column - 2))
+        self.body_positions.add((self.row, self.column - 1))
+        self.body_positions.add((self.row, self.column))
+
+        self.body_objects[0].grid(row=self.row, column=self.column - 2)
+        self.body_objects[1].grid(row=self.row, column=self.column - 1)
+
+        self.snake_head.grid(row=self.row, column=self.column)
 
         # Start the snake's movement
         self.movement()
@@ -94,8 +93,6 @@ class Snake(ctk.CTk):
         self.apple_row = randint(0, max_row_index)
         self.apple_column = randint(0, max_column_index)
         self.apple.grid(row=self.apple_row, column=self.apple_column)
-        # Log apple position
-        logging.debug(f"Apple generated at row {self.apple_row}, column {self.apple_column}")
 
     def grid_window(self):
         """
@@ -119,29 +116,47 @@ class Snake(ctk.CTk):
             self.columnconfigure(index, weight=1, uniform='a')
 
     def movement(self):
+        """
+        Handles the movement of the snake in the game.
+
+        This method updates the position of the snake's head based on the current direction of movement.
+        It checks for collisions with the apple, updates the snake's body parts, and schedules the next
+        movement. If the game is over, it displays a "Game Over" message.
+
+        The following steps are performed in this method:
+
+        1. Update the snake's head position based on the current direction.
+        2. Check if the game is still on by calling `self.game_on()`.
+        3. If the game is on:
+           a. Handle collisions with the apple by calling `self.handle_apple_collision()`.
+           b. Log the current grid layout and the new position of the snake's head.
+           c. Update the grid to reflect the new position of the snake's head.
+           d. Remove the tail part from the grid.
+           e. Add the new head position to the snake's body list.
+           f. Log the body parts after movement.
+           g. Schedule the next movement using `self.after(self.refresh_speed, self.movement)`.
+        4. If the game is over:
+           a. Display a "Game Over" message with the snake's tail length as the record.
+           b. Log the "Game Over" message.
+
+        :return: None
+        """
+
         current_direction = self.direction
+        old_row = self.row
+        old_column = self.column
 
         self.row += DIRECTIONS.get(current_direction)[1]
         self.column += DIRECTIONS.get(current_direction)[0]
         if self.game_on():
             self.handle_apple_collision()
             # self.update()
-            for row, column, body_part in self.body_list:
-                logging.debug(f"Body part at row {row}, column {column}")
-                body_part.grid(row=row, column=column)
-            logging.debug(f"Snake head at row {self.row}, column {self.column}")
             self.snake_head.grid(row=self.row, column=self.column, sticky='news')
-
-            # Remove the tail part from the grid
-            tail_row, tail_column, tail_part = self.body_list[0]
-            tail_part.grid_forget()
-            # Add new head position to the body list
-            new_body_part = ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)
-            self.body_list.add((self.row, self.column, new_body_part))
-            # Log body parts after movement
-            logging.debug("Body parts after movement:")
-            for row, column, body_part in self.body_list:
-                logging.debug(f"Body part at row {row}, column {column}")
+            self.update()
+            last = self.body_objects.pop()
+            self.body_objects.insert(0, last)
+            self.body_positions.add((self.row, self.column))
+            self.body_objects[0].grid(row=old_row, column=old_column)
 
             self.after(self.refresh_speed, self.movement)
         else:
@@ -149,7 +164,6 @@ class Snake(ctk.CTk):
                          font=('helvetica', 30, 'bold')).grid(row=7,
                                                               column=4,
                                                               columnspan=10)
-            logging.debug(f"Game Over, record = {self.snake_tail_length}")
 
     def game_on(self):
         """
@@ -166,7 +180,8 @@ class Snake(ctk.CTk):
             `True` if the game is ongoing, `False` otherwise.
         """
         in_range = 0 <= self.row < 15 and 0 <= self.column < 20
-        hit_its_tail = (self.row, self.column) in [(row, column) for row, column, _ in self.body_list]
+        # print(list(self.body_positions))
+        hit_its_tail = (self.row, self.column) in list(self.body_positions)
         return in_range and not hit_its_tail
 
     def handle_apple_collision(self):
@@ -188,14 +203,13 @@ class Snake(ctk.CTk):
         """
 
         if self.row == self.apple_row and self.column == self.apple_column:
+            self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
             self.snake_tail_length += 1
-            self.body_list.max_size = self.snake_tail_length
+            self.body_positions.max_size = self.snake_tail_length
 
             self.apple.grid_forget()
             self.randomize_apple_position()
             self.refresh_speed -= 5
-            logging.debug(
-                f"Apple hit at row {self.apple_row}, column {self.apple_column}. New length: {self.snake_tail_length}")
 
     def change_direction(self, event=None, direction=None):
         """
@@ -210,7 +224,6 @@ class Snake(ctk.CTk):
         :return: None
         """
         self.direction = direction
-        logging.debug(f"Direction changed to {self.direction}")
 
 
 app = Snake()

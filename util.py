@@ -23,7 +23,12 @@ class LimitedList:
         self.items.append(item)
 
     def __getitem__(self, index):
-        return self.items[index]
+        if isinstance(index, slice):
+            # Convert the deque to a list and return the sliced portion
+            return list(self.items)[index]
+        else:
+            # Handle integer index
+            return self.items[index]
 
     def __iter__(self):
         return iter(self.items)
