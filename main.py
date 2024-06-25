@@ -55,6 +55,7 @@ class Snake(ctk.CTk):
         self.bind('<Left>', lambda e: self.change_direction(e, 'left'))
         self.bind('<Right>', lambda e: self.change_direction(e, 'right'))
         self.generate_random_apple()
+        self.refresh_speed = 250
 
         # starting position
         self.row = START_POS[1]
@@ -63,9 +64,11 @@ class Snake(ctk.CTk):
 
         self.snake_head = ctk.CTkFrame(self, fg_color=SNAKE_HEAD_COLOR, corner_radius=0)
         self.snake_head.grid(row=self.row, column=self.column)
+        self.frm = ctk.CTkFrame(self, fg_color=APPLE_COLOR)
 
-        self.body_list.add((self.row, self.column - 1, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
+
         self.body_list.add((self.row, self.column - 2, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
+        self.body_list.add((self.row, self.column - 1, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
 
         self.length = 2
 
@@ -76,10 +79,8 @@ class Snake(ctk.CTk):
 
     def generate_random_apple(self):
         # creating a random apple
-        self.frm = ctk.CTkFrame(self, fg_color=APPLE_COLOR)
         self.apple_row = randint(0, FIELDS[1] - 1)
         self.apple_column = randint(0, FIELDS[0] - 1)
-        # print(self.apple_row, self.apple_column)
         self.frm.grid(row=self.apple_row, column=self.apple_column)
 
     def grid_window(self):
@@ -98,28 +99,35 @@ class Snake(ctk.CTk):
 
         self.row += DIRECTIONS.get(current_direction)[1]
         self.column += DIRECTIONS.get(current_direction)[0]
-        if 0 <= self.row < 15 and 0 <= self.column < 20:
+        if self.game_on():
 
             self.check_for_hit()
+            print(f"{self.row=}, {self.column=}")
             self.snake_head.grid(row=self.row, column=self.column, sticky='news')
             for row, column, body_part in self.body_list:
                 body_part.grid(row=row, column=column)
+            self.body_list[0][2].grid_forget()
 
-            self.after(REFRESH_SPEED, self.movement)
+            self.body_list.add((self.row, self.column, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
+
+            self.after(self.refresh_speed, self.movement)
         else:
-            print('game over')
+            ctk.CTkLabel(self, text=f'Game Over, record = {self.length}', font=('helvetica', 30, 'bold')).grid(row=7, column=5, columnspan=8)
+
+    def game_on(self):
+        in_range = 0 <= self.row < 15 and 0 <= self.column < 20
+        hit_its_tail = (self.row, self.column) in [(row, column) for row, column, _ in self.body_list]
+        return in_range and not hit_its_tail
 
     def check_for_hit(self):
         if self.row == self.apple_row and self.column == self.apple_column:
             self.length += 1
             self.body_list.max_size = self.length
 
-            # print(self.length)
             self.frm.grid_forget()
             self.generate_random_apple()
-        print(self.body_list[0][2])
-        self.body_list[0][2].grid_forget()
-        self.body_list.add((self.row, self.column, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
+            self.refresh_speed -= 5
+        print(list(self.body_list))
 
     def change_direction(self, event=None, direction=None):
         self.direction = direction
