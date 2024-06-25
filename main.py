@@ -1,7 +1,6 @@
 import customtkinter as ctk
 from settings import *
 from random import randint
-
 from collections import deque
 
 
@@ -46,6 +45,7 @@ class Snake(ctk.CTk):
         # window setup
         self.title('Snake')
         self.geometry(f'{WINDOW_SIZE[0]}x{WINDOW_SIZE[1]}')
+        self.apple = ctk.CTkFrame(self, fg_color=APPLE_COLOR)
 
         self.grid_window()
 
@@ -64,13 +64,11 @@ class Snake(ctk.CTk):
 
         self.snake_head = ctk.CTkFrame(self, fg_color=SNAKE_HEAD_COLOR, corner_radius=0)
         self.snake_head.grid(row=self.row, column=self.column)
-        self.frm = ctk.CTkFrame(self, fg_color=APPLE_COLOR)
-
 
         self.body_list.add((self.row, self.column - 2, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
         self.body_list.add((self.row, self.column - 1, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
 
-        self.length = 2
+        self.snake_length = 2
 
         for row, column, body_part in self.body_list:
             body_part.grid(row=row, column=column)
@@ -79,9 +77,12 @@ class Snake(ctk.CTk):
 
     def generate_random_apple(self):
         # creating a random apple
-        self.apple_row = randint(0, FIELDS[1] - 1)
-        self.apple_column = randint(0, FIELDS[0] - 1)
-        self.frm.grid(row=self.apple_row, column=self.apple_column)
+        max_row_index = FIELDS[1] - 1
+        max_column_index = FIELDS[0] - 1
+
+        self.apple_row = randint(0, max_row_index)
+        self.apple_column = randint(0, max_column_index)
+        self.apple.grid(row=self.apple_row, column=self.apple_column)
 
     def grid_window(self):
         number_of_rows = FIELDS[1]
@@ -100,19 +101,26 @@ class Snake(ctk.CTk):
         self.row += DIRECTIONS.get(current_direction)[1]
         self.column += DIRECTIONS.get(current_direction)[0]
         if self.game_on():
-
             self.check_for_hit()
+            # self.update()
+            for row, column, body_part in self.body_list:
+                print(f"{row=}, {column=}")
+                body_part.grid(row=row, column=column)
             print(f"{self.row=}, {self.column=}")
             self.snake_head.grid(row=self.row, column=self.column, sticky='news')
-            for row, column, body_part in self.body_list:
-                body_part.grid(row=row, column=column)
-            self.body_list[0][2].grid_forget()
 
-            self.body_list.add((self.row, self.column, ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)))
+            # Remove the tail part from the grid
+            tail_row, tail_column, tail_part = self.body_list[0]
+            tail_part.grid_forget()
+            # Add new head position to the body list
+            new_body_part = ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)
+            self.body_list.add((self.row, self.column, new_body_part))
 
             self.after(self.refresh_speed, self.movement)
         else:
-            ctk.CTkLabel(self, text=f'Game Over, record = {self.length}', font=('helvetica', 30, 'bold')).grid(row=7, column=5, columnspan=8)
+            ctk.CTkLabel(self, text=f'Game Over, record = {self.snake_length}', font=('helvetica', 30, 'bold')).grid(row=7,
+                                                                                                                     column=5,
+                                                                                                                     columnspan=8)
 
     def game_on(self):
         in_range = 0 <= self.row < 15 and 0 <= self.column < 20
@@ -121,13 +129,13 @@ class Snake(ctk.CTk):
 
     def check_for_hit(self):
         if self.row == self.apple_row and self.column == self.apple_column:
-            self.length += 1
-            self.body_list.max_size = self.length
+            self.snake_length += 1
+            self.body_list.max_size = self.snake_length
 
-            self.frm.grid_forget()
+            self.apple.grid_forget()
             self.generate_random_apple()
             self.refresh_speed -= 5
-        print(list(self.body_list))
+        # print(list(self.body_list))
 
     def change_direction(self, event=None, direction=None):
         self.direction = direction
