@@ -15,6 +15,12 @@ class Snake(ctk.CTk):
         # Configure the grid layout for the window
         self.grid_window()
         # Initialize the starting direction of the snake
+        self.start_game()
+
+    def start_game(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+
         self.direction = 'right'
         # Bind keyboard arrow keys to change the snake's direction
         self.bind_keyboard()
@@ -39,15 +45,14 @@ class Snake(ctk.CTk):
         self.snake_head = ctk.CTkFrame(self, fg_color=SNAKE_HEAD_COLOR, corner_radius=0)
 
         # Add initial body parts to the snake's body list
-        self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
-        self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
+        self.create_body_parts(number=2)
 
         self.body_positions.add((self.row, self.column - 2))
         self.body_positions.add((self.row, self.column - 1))
         self.body_positions.add((self.row, self.column))
 
-        self.body_objects[0].grid(row=self.row, column=self.column - 2)
-        self.body_objects[1].grid(row=self.row, column=self.column - 1)
+        self.body_objects[0].grid(row=self.row, column=self.column - 2, sticky='news')
+        self.body_objects[1].grid(row=self.row, column=self.column - 1, sticky='news')
 
         self.snake_head.grid(row=self.row, column=self.column)
 
@@ -160,10 +165,15 @@ class Snake(ctk.CTk):
 
             self.after(self.refresh_speed, self.movement)
         else:
-            ctk.CTkLabel(self, text=f'Game Over, record = {self.snake_tail_length}',
-                         font=('helvetica', 30, 'bold')).grid(row=7,
-                                                              column=4,
-                                                              columnspan=10)
+            ctk.CTkLabel(self,
+                         text=f'Game Over, record = {self.snake_tail_length}',
+                         font=('helvetica', 30, 'bold')).place(relx=0.5, rely=0.5, anchor='center')
+            ctk.CTkButton(self,
+                          text='دوباره بازی کنید',
+                          command=self.start_game,
+                          text_color='black',
+                          font=('B Titr', 25, 'bold')
+                          ).place(relx=0.5, rely=0.6, anchor='center')
 
     def game_on(self):
         """
@@ -203,9 +213,9 @@ class Snake(ctk.CTk):
         """
 
         if self.row == self.apple_row and self.column == self.apple_column:
-            self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
             self.snake_tail_length += 1
             self.body_positions.max_size = self.snake_tail_length
+            self.create_body_parts()
 
             self.apple.grid_forget()
             self.randomize_apple_position()
@@ -224,6 +234,10 @@ class Snake(ctk.CTk):
         :return: None
         """
         self.direction = direction
+
+    def create_body_parts(self, number=1):
+        for _ in range(number):
+            self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
 
 
 app = Snake()
