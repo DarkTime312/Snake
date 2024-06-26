@@ -7,12 +7,6 @@ from util import LimitedList
 class Snake(ctk.CTk):
     """
     A class representing the Snake game using CustomTkinter.
-
-    This class sets up the game window, initializes the game state, and manages the game loop.
-    It inherits from ctk.CTk to create the main game window.
-
-    Attributes:
-        Various attributes are initialized in the __init__ and start_game methods.
     """
 
     def __init__(self):
@@ -22,7 +16,6 @@ class Snake(ctk.CTk):
         This method sets up the main game window, configures the grid layout,
         and starts the initial game state.
         """
-
         super().__init__()
 
         # window setup
@@ -30,8 +23,31 @@ class Snake(ctk.CTk):
         self.geometry(f'{WINDOW_SIZE[0]}x{WINDOW_SIZE[1]}')
         # Configure the grid layout for the window
         self.grid_window()
+        # Set up keyboard controls
+        self.bind_keyboard()
         # Initialize the starting state of the game
         self.start_game()
+
+    def grid_window(self):
+        """
+        Configures the grid layout for the window.
+
+        This method sets up the grid layout for the window by configuring the rows and columns
+        based on the number of rows and columns specified in the `FIELDS` constant. Each row and
+        column is configured to have an equal weight and uniform size, ensuring that the grid
+        cells are evenly distributed across the window.
+
+        :return: None
+        """
+        number_of_rows = FIELDS[1]
+        number_of_columns = FIELDS[0]
+        # creating the rows
+        for index in range(number_of_rows):
+            self.rowconfigure(index, weight=1, uniform='a')
+
+        # creating the columns
+        for index in range(number_of_columns):
+            self.columnconfigure(index, weight=1, uniform='a')
 
     def start_game(self):
         """
@@ -40,53 +56,44 @@ class Snake(ctk.CTk):
         This method performs the following actions:
         1. Clears all existing widgets from the window.
         2. Sets the initial direction of the snake.
-        3. Binds keyboard controls.
-        4. Creates and positions the apple.
-        5. Sets initial game parameters (speed, snake length).
-        6. Creates the snake's head and body parts.
-        7. Positions the snake on the grid.
-        8. Starts the snake's movement.
+        3. Creates and positions the apple.
+        4. Sets initial game parameters (speed, snake length).
+        5. Creates the snake's head and body parts.
+        6. Positions the snake on the grid.
+        7. Starts the snake's movement.
 
         This method can be called to start a new game or to reset the game after it ends.
         """
+        # Clear all existing widgets from the window
         for widget in self.winfo_children():
             widget.destroy()
 
-        # Initialize the starting direction of the snake
+        # Set the initial direction of the snake
         self.direction = 'right'
-        # Bind keyboard arrow keys to change the snake's direction
-        self.bind_keyboard()
 
-        # Create the apple frame and randomize its position on the grid
+        # Create the apple and place it randomly on the grid
         self.apple = ctk.CTkFrame(self, fg_color=APPLE_COLOR)
         self.randomize_apple_position()
 
-        # Set the initial refresh speed for the snake's movement
-        self.refresh_speed = 250
-        # Set the initial length of the snake's tail
-        self.snake_tail_length = 3
+        # Set initial game parameters
+        self.refresh_speed = 250  # Movement speed of the snake
+        self.snake_body_length = 3  # Initial length of the snake
 
         # Initialize the starting position of the snake's head
         self.row = START_POS[1]
         self.column = START_POS[0]
-        # Create a limited list to store the snake's body parts
-        self.body_positions = LimitedList(3)
-        self.body_objects = []
 
-        # Create the snake's head frame and place it on the grid
+        # Create a limited list to store the snake's body parts
+        self.body_positions = LimitedList(3)  # Stores positions of body parts
+        self.body_objects = []  # Stores the actual body part widgets
+
+        # Create the snake's head
         self.snake_head = ctk.CTkFrame(self, fg_color=SNAKE_HEAD_COLOR, corner_radius=0)
 
-        # Add initial body parts to the snake's body list
+        # Create and add initial body parts to the snake's body list
         self.create_body_parts(number=2)
 
-        self.body_positions.add((self.row, self.column - 2))
-        self.body_positions.add((self.row, self.column - 1))
-        self.body_positions.add((self.row, self.column))
-
-        for body_part, (row, column) in zip(self.body_objects, self.body_positions):
-            body_part.grid(row=row, column=column, sticky='news')
-
-        self.snake_head.grid(row=self.row, column=self.column)
+        self.initialize_snake_position()
 
         # Start the snake's movement
         self.movement()
@@ -118,39 +125,42 @@ class Snake(ctk.CTk):
         This method generates a random position for the apple within the bounds of the grid
         defined by the `FIELDS` constant. The apple's row and column indices are set to random
         values within the allowable range, and the apple is placed at the new position on the grid.
-        The new position of the apple is also logged for debugging purposes.
 
         :return: None
         """
 
-        # creating a random apple
+        # Calculate the maximum possible row and column indices
+        # Subtract 1 from FIELDS dimensions to account for 0-based indexing
         max_row_index = FIELDS[1] - 1
         max_column_index = FIELDS[0] - 1
 
+        # Generate random row and column indices for the apple
         self.apple_row = randint(0, max_row_index)
         self.apple_column = randint(0, max_column_index)
+
+        # Place the apple at the randomly generated position on the grid
+        # The 'grid' method is used to position the apple widget
         self.apple.grid(row=self.apple_row, column=self.apple_column)
 
-    def grid_window(self):
+    def initialize_snake_position(self):
         """
-        Configures the grid layout for the window.
+        Initialize the starting position of the snake on the grid.
 
-        This method sets up the grid layout for the window by configuring the rows and columns
-        based on the number of rows and columns specified in the `FIELDS` constant. Each row and
-        column is configured to have an equal weight and uniform size, ensuring that the grid
-        cells are evenly distributed across the window.
-
-        :return: None
+        This method sets up the initial body positions of the snake,
+        places the body parts on the grid, and positions the snake's head.
         """
-        number_of_rows = FIELDS[1]
-        number_of_columns = FIELDS[0]
-        # creating the rows
-        for index in range(number_of_rows):
-            self.rowconfigure(index, weight=1, uniform='a')
 
-        # creating the columns
-        for index in range(number_of_columns):
-            self.columnconfigure(index, weight=1, uniform='a')
+        # Add initial body positions
+        self.body_positions.add((self.row, self.column - 2))
+        self.body_positions.add((self.row, self.column - 1))
+        self.body_positions.add((self.row, self.column))
+
+        # Place body parts on the grid
+        for body_part, (row, column) in zip(self.body_objects, self.body_positions):
+            body_part.grid(row=row, column=column, sticky='news')
+
+        # Place the snake's head on the grid
+        self.snake_head.grid(row=self.row, column=self.column)
 
     def movement(self):
         """
@@ -172,24 +182,35 @@ class Snake(ctk.CTk):
         The movement is recursive, scheduling itself to run again after a delay
         defined by self.refresh_speed, creating the continuous movement of the snake.
         """
+
+        # Store the current direction and the old position of the snake's head
         current_direction = self.direction
         old_row = self.row
         old_column = self.column
 
+        # Update the snake's head position based on the current direction
+        # DIRECTIONS is a dictionary mapping directions to coordinate changes
         self.row += DIRECTIONS.get(current_direction)[1]
         self.column += DIRECTIONS.get(current_direction)[0]
 
+        # Check if the game can continue (e.g., no collisions with walls or self)
         if self.can_game_continue():
+            # Check and handle if the snake has collided with an apple
             self.handle_apple_collision()
+
+            # Update the position of the snake's head on the grid
             self.snake_head.grid(row=self.row, column=self.column, sticky='news')
 
+            # Update the positions of the snake's body parts
             self.update_body_positions(cur_row=self.row,
                                        cur_col=self.column,
                                        old_row=old_row,
                                        old_col=old_column)
 
+            # Schedule the next movement after a delay (self.refresh_speed)
             self.after(self.refresh_speed, self.movement)
         else:
+            # If the game cannot continue, trigger the game over sequence
             self.game_over()
 
     def update_body_positions(self, cur_row, cur_col, old_row, old_col):
@@ -233,20 +254,9 @@ class Snake(ctk.CTk):
         2. Creates a "Play Again" button that allows the player to restart the game.
            The button is positioned below the game over message and is linked to
            the start_game method.
-
-        Visual Formatting:
-        - The game over message uses Helvetica font, size 30, bold.
-        - The play again button uses B Titr font, size 25, bold, with black text.
-
-        Both elements are placed using relative coordinates:
-        - Game over message: centered horizontally and vertically (relx=0.5, rely=0.5)
-        - Play again button: centered horizontally, slightly below center (relx=0.5, rely=0.6)
-
-        Note: This method assumes the existence of a start_game method to handle
-        game restart functionality.
         """
         ctk.CTkLabel(self,
-                     text=f'Game Over, record = {self.snake_tail_length}',
+                     text=f'Game Over, record = {self.snake_body_length}',
                      font=('helvetica', 30, 'bold')).place(relx=0.5, rely=0.5, anchor='center')
         ctk.CTkButton(self,
                       text='Play Again!',
@@ -286,15 +296,14 @@ class Snake(ctk.CTk):
         3. The apple is removed from its current position on the grid.
         4. A new random position is generated for the apple.
         5. The speed for the snake's movement is increased by 5 milliseconds.
-        6. A debug message is logged with the new position of the apple and the updated tail length of the snake.
 
         :return: None
         """
 
         if self.row == self.apple_row and self.column == self.apple_column:
-            self.snake_tail_length += 1
-            self.body_positions.max_size = self.snake_tail_length
-            self.create_body_parts()
+            self.snake_body_length += 1
+            self.body_positions.max_size = self.snake_body_length
+            self.create_body_parts(number=1)
 
             self.apple.grid_forget()
             self.randomize_apple_position()
@@ -305,7 +314,7 @@ class Snake(ctk.CTk):
         Changes the direction of the snake's movement.
 
         This method updates the direction in which the snake is moving. It sets the snake's
-        direction to the specified `direction` parameter and logs the change for debugging purposes.
+        direction to the specified `direction` parameter.
 
         :param event: Optional; the event object associated with the key press. Default is `None`.
         :param direction: str; the new direction for the snake's movement. Expected values are
@@ -314,7 +323,7 @@ class Snake(ctk.CTk):
         """
         self.direction = direction
 
-    def create_body_parts(self, number=1):
+    def create_body_parts(self, number: int = 1):
         """
         Creates and adds new body parts to the snake.
 
@@ -335,8 +344,7 @@ class Snake(ctk.CTk):
 
         Note:
         - The created body parts are not immediately placed on the game grid.
-          Their positioning should be handled separately.
-        - The SNAKE_BODY_COLOR constant should be defined elsewhere in the code.
+          Their positioning will be handled separately.
 
         This method is typically called when the snake grows after eating an apple
         or during the initial setup of the game.
