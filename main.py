@@ -3,6 +3,8 @@ from settings import *
 from random import randint
 from util import LimitedList
 
+ctk.set_appearance_mode('dark')
+
 
 class Snake(ctk.CTk):
     """
@@ -279,7 +281,7 @@ class Snake(ctk.CTk):
         :return: bool
             `True` if the game is ongoing, `False` otherwise.
         """
-        in_range = 0 <= self.row < 15 and 0 <= self.column < 20
+        in_range = (TOP_LIMIT <= self.row < BOTTOM_LIMIT) and (LEFT_LIMIT <= self.column < RIGHT_LIMIT)
         hit_its_tail = (self.row, self.column) in list(self.body_positions)
         return in_range and not hit_its_tail
 
@@ -311,17 +313,37 @@ class Snake(ctk.CTk):
 
     def change_direction(self, event=None, direction=None):
         """
-        Changes the direction of the snake's movement.
+        Change the direction of the snake's movement.
 
-        This method updates the direction in which the snake is moving. It sets the snake's
-        direction to the specified `direction` parameter.
+        This method updates the snake's direction based on the input, ensuring that
+        the snake cannot immediately reverse its direction. The new direction is only
+        applied if it's not directly opposite to the current direction.
 
-        :param event: Optional; the event object associated with the key press. Default is `None`.
-        :param direction: str; the new direction for the snake's movement. Expected values are
-                          'up', 'down', 'left', or 'right'.
-        :return: None
+        Parameters:
+        event (tkinter.Event, optional): The event that triggered the direction change.
+                                         This parameter is not used in the method but is
+                                         included for compatibility with event bindings.
+        direction (str): The new direction to change to. Must be one of 'up', 'down', 'left', or 'right'.
+
+        Rules for direction change:
+        - If moving right, cannot change to left
+        - If moving left, cannot change to right
+        - If moving up, cannot change to down
+        - If moving down, cannot change to up
+
+        The method silently ignores invalid direction changes (i.e., trying to reverse direction).
+
+        Returns:
+        None
         """
-        self.direction = direction
+        if self.direction == 'right' and direction != 'left':
+            self.direction = direction
+        elif self.direction == 'left' and direction != 'right':
+            self.direction = direction
+        elif self.direction == 'up' and direction != 'down':
+            self.direction = direction
+        elif self.direction == 'down' and direction != 'up':
+            self.direction = direction
 
     def create_body_parts(self, number: int = 1):
         """
