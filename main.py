@@ -1,12 +1,28 @@
 import customtkinter as ctk
 from settings import *
 from random import randint
-import logging
 from util import LimitedList
 
 
 class Snake(ctk.CTk):
+    """
+    A class representing the Snake game using CustomTkinter.
+
+    This class sets up the game window, initializes the game state, and manages the game loop.
+    It inherits from ctk.CTk to create the main game window.
+
+    Attributes:
+        Various attributes are initialized in the __init__ and start_game methods.
+    """
+
     def __init__(self):
+        """
+        Initialize the Snake game window and start the game.
+
+        This method sets up the main game window, configures the grid layout,
+        and starts the initial game state.
+        """
+
         super().__init__()
 
         # window setup
@@ -14,13 +30,29 @@ class Snake(ctk.CTk):
         self.geometry(f'{WINDOW_SIZE[0]}x{WINDOW_SIZE[1]}')
         # Configure the grid layout for the window
         self.grid_window()
-        # Initialize the starting direction of the snake
+        # Initialize the starting state of the game
         self.start_game()
 
     def start_game(self):
+        """
+        Initialize or reset the game state to start a new game.
+
+        This method performs the following actions:
+        1. Clears all existing widgets from the window.
+        2. Sets the initial direction of the snake.
+        3. Binds keyboard controls.
+        4. Creates and positions the apple.
+        5. Sets initial game parameters (speed, snake length).
+        6. Creates the snake's head and body parts.
+        7. Positions the snake on the grid.
+        8. Starts the snake's movement.
+
+        This method can be called to start a new game or to reset the game after it ends.
+        """
         for widget in self.winfo_children():
             widget.destroy()
 
+        # Initialize the starting direction of the snake
         self.direction = 'right'
         # Bind keyboard arrow keys to change the snake's direction
         self.bind_keyboard()
@@ -51,8 +83,8 @@ class Snake(ctk.CTk):
         self.body_positions.add((self.row, self.column - 1))
         self.body_positions.add((self.row, self.column))
 
-        self.body_objects[0].grid(row=self.row, column=self.column - 2, sticky='news')
-        self.body_objects[1].grid(row=self.row, column=self.column - 1, sticky='news')
+        for body_part, (row, column) in zip(self.body_objects, self.body_positions):
+            body_part.grid(row=row, column=column, sticky='news')
 
         self.snake_head.grid(row=self.row, column=self.column)
 
@@ -124,58 +156,106 @@ class Snake(ctk.CTk):
         """
         Handles the movement of the snake in the game.
 
-        This method updates the position of the snake's head based on the current direction of movement.
-        It checks for collisions with the apple, updates the snake's body parts, and schedules the next
-        movement. If the game is over, it displays a "Game Over" message.
+        This method updates the snake's position based on the current direction,
+        checks for collisions, updates the snake's body, and manages the game flow.
 
-        The following steps are performed in this method:
+        The method performs the following steps:
+        1. Updates the snake's head position based on the current direction.
+        2. Checks if the game can continue.
+        3. If the game can continue:
+           - Handles potential apple collisions.
+           - Updates the position of the snake's head on the grid.
+           - Updates the snake's body parts.
+           - Schedules the next movement.
+        4. If the game cannot continue, it triggers the game over sequence.
 
-        1. Update the snake's head position based on the current direction.
-        2. Check if the game is still on by calling `self.game_on()`.
-        3. If the game is on:
-           a. Handle collisions with the apple by calling `self.handle_apple_collision()`.
-           b. Log the current grid layout and the new position of the snake's head.
-           c. Update the grid to reflect the new position of the snake's head.
-           d. Remove the tail part from the grid.
-           e. Add the new head position to the snake's body list.
-           f. Log the body parts after movement.
-           g. Schedule the next movement using `self.after(self.refresh_speed, self.movement)`.
-        4. If the game is over:
-           a. Display a "Game Over" message with the snake's tail length as the record.
-           b. Log the "Game Over" message.
-
-        :return: None
+        The movement is recursive, scheduling itself to run again after a delay
+        defined by self.refresh_speed, creating the continuous movement of the snake.
         """
-
         current_direction = self.direction
         old_row = self.row
         old_column = self.column
 
         self.row += DIRECTIONS.get(current_direction)[1]
         self.column += DIRECTIONS.get(current_direction)[0]
-        if self.game_on():
+
+        if self.can_game_continue():
             self.handle_apple_collision()
-            # self.update()
             self.snake_head.grid(row=self.row, column=self.column, sticky='news')
-            self.update()
-            last = self.body_objects.pop()
-            self.body_objects.insert(0, last)
-            self.body_positions.add((self.row, self.column))
-            self.body_objects[0].grid(row=old_row, column=old_column)
+
+            self.update_body_positions(cur_row=self.row,
+                                       cur_col=self.column,
+                                       old_row=old_row,
+                                       old_col=old_column)
 
             self.after(self.refresh_speed, self.movement)
         else:
-            ctk.CTkLabel(self,
-                         text=f'Game Over, record = {self.snake_tail_length}',
-                         font=('helvetica', 30, 'bold')).place(relx=0.5, rely=0.5, anchor='center')
-            ctk.CTkButton(self,
-                          text='دوباره بازی کنید',
-                          command=self.start_game,
-                          text_color='black',
-                          font=('B Titr', 25, 'bold')
-                          ).place(relx=0.5, rely=0.6, anchor='center')
+            self.game_over()
 
-    def game_on(self):
+    def update_body_positions(self, cur_row, cur_col, old_row, old_col):
+        """
+        Updates the position of the snake's body parts.
+
+        This method is responsible for moving the snake's body parts to follow
+        the head's movement. It updates both the visual representation and the
+        internal data structures tracking the snake's body.
+
+        Args:
+        cur_row (int): The current row of the snake's head.
+        cur_col (int): The current column of the snake's head.
+        old_row (int): The previous row of the snake's head.
+        old_col (int): The previous column of the snake's head.
+
+        The method performs the following operations:
+        1. Removes the last body part from the list of body objects.
+        2. Inserts this part at the beginning of the list (just behind the head).
+        3. Adds the current head position to the body positions.
+        4. Updates the grid position of the new first body part to the old head position.
+
+        This creates the effect of the snake's body following its head as it moves.
+        """
+
+        last = self.body_objects.pop()
+        self.body_objects.insert(0, last)
+        self.body_positions.add((cur_row, cur_col))
+        self.body_objects[0].grid(row=old_row, column=old_col)
+
+    def game_over(self):
+        """
+        Handles the game over state and displays the end game screen.
+
+        This method is called when the game ends, typically when the snake collides
+        with itself or the game boundaries. It performs the following actions:
+
+        1. Displays a "Game Over" message along with the player's score (snake length).
+           The message is shown as a CTkLabel widget centered on the screen.
+
+        2. Creates a "Play Again" button that allows the player to restart the game.
+           The button is positioned below the game over message and is linked to
+           the start_game method.
+
+        Visual Formatting:
+        - The game over message uses Helvetica font, size 30, bold.
+        - The play again button uses B Titr font, size 25, bold, with black text.
+
+        Both elements are placed using relative coordinates:
+        - Game over message: centered horizontally and vertically (relx=0.5, rely=0.5)
+        - Play again button: centered horizontally, slightly below center (relx=0.5, rely=0.6)
+
+        Note: This method assumes the existence of a start_game method to handle
+        game restart functionality.
+        """
+        ctk.CTkLabel(self,
+                     text=f'Game Over, record = {self.snake_tail_length}',
+                     font=('helvetica', 30, 'bold')).place(relx=0.5, rely=0.5, anchor='center')
+        ctk.CTkButton(self,
+                      text='Play Again!',
+                      command=self.start_game,
+                      text_color='black',
+                      font=('B Titr', 25, 'bold')
+                      ).place(relx=0.5, rely=0.6, anchor='center')
+
+    def can_game_continue(self):
         """
         Checks if the game is still ongoing.
 
@@ -190,7 +270,6 @@ class Snake(ctk.CTk):
             `True` if the game is ongoing, `False` otherwise.
         """
         in_range = 0 <= self.row < 15 and 0 <= self.column < 20
-        # print(list(self.body_positions))
         hit_its_tail = (self.row, self.column) in list(self.body_positions)
         return in_range and not hit_its_tail
 
@@ -236,8 +315,35 @@ class Snake(ctk.CTk):
         self.direction = direction
 
     def create_body_parts(self, number=1):
+        """
+        Creates and adds new body parts to the snake.
+
+        This method generates new body segments for the snake and adds them to the
+        internal list of body objects. Each body part is represented by a CTkFrame
+        widget with specific visual properties.
+
+        Args:
+            number (int, optional): The number of body parts to create. Defaults to 1.
+
+        The method performs the following actions:
+        1. Iterates 'number' times to create the specified number of body parts.
+        2. For each iteration, it creates a new CTkFrame widget with the following properties:
+           - Parent widget: self (the current instance)
+           - Foreground color: Defined by SNAKE_BODY_COLOR constant
+           - Corner radius: 0 (creating a square shape)
+        3. Appends each new body part to the self.body_objects list.
+
+        Note:
+        - The created body parts are not immediately placed on the game grid.
+          Their positioning should be handled separately.
+        - The SNAKE_BODY_COLOR constant should be defined elsewhere in the code.
+
+        This method is typically called when the snake grows after eating an apple
+        or during the initial setup of the game.
+        """
         for _ in range(number):
-            self.body_objects.append(ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0))
+            body_part = ctk.CTkFrame(self, fg_color=SNAKE_BODY_COLOR, corner_radius=0)
+            self.body_objects.append(body_part)
 
 
 app = Snake()
