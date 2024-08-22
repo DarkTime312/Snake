@@ -1,10 +1,10 @@
 # window info
-WINDOW_SIZE = (800,600)
-FIELDS = (20,15)
+WINDOW_SIZE = (800, 600)
+FIELDS = (20, 15)
 
 # movement
-START_POS = (5,int(FIELDS[1] / 2))
-DIRECTIONS = {'left': [-1,0], 'right': [1,0], 'up': [0,-1], 'down': [0,1]}
+START_POS = (5, int(FIELDS[1] / 2))
+DIRECTIONS = {'left': [-1, 0], 'right': [1, 0], 'up': [0, -1], 'down': [0, 1]}
 REFRESH_SPEED = 250
 
 # field limits 
