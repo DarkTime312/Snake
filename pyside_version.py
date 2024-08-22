@@ -52,7 +52,7 @@ class Board(QWidget):
         self.direction = 'right'
 
         # Create the apple and place it randomly on the grid
-        self.apple = self.create_object(APPLE_COLOR)
+        self.apple = self.create_object(APPLE_COLOR, apple=True)
 
         self.randomize_apple_position()
 
@@ -243,9 +243,10 @@ class Board(QWidget):
         # Place the snake's head on the grid
         self.grid_layout.addWidget(self.snake_head, self.row, self.column)
 
-    def create_object(self, color: str) -> QLabel:
+    def create_object(self, color: str, apple=False) -> QLabel:
+        border_radius = 5 if apple else 0
         body_part = QLabel()
-        body_part.setStyleSheet(f"background-color: {color}")
+        body_part.setStyleSheet(f"background-color: {color}; border: 2px solid transparent; border-radius:{border_radius}px")
         return body_part
 
     def change_direction(self, direction=None):

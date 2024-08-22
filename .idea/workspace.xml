@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9c9c8255-a1c3-438c-9cca-2c5bb7946638" name="Changes" comment="added pyside version">
-      <change afterPath="$PROJECT_DIR$/empty.ico" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="9c9c8255-a1c3-438c-9cca-2c5bb7946638" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/pyside_version.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyside_version.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -284,7 +282,15 @@
       <option name="project" value="LOCAL" />
       <updated>1724334599377</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="finished pyside version">
+      <option name="closed" value="true" />
+      <created>1724340602712</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1724340602712</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -312,6 +318,7 @@
     <MESSAGE value="v1.5" />
     <MESSAGE value="v1.6" />
     <MESSAGE value="added pyside version" />
-    <option name="LAST_COMMIT_MESSAGE" value="added pyside version" />
+    <MESSAGE value="finished pyside version" />
+    <option name="LAST_COMMIT_MESSAGE" value="finished pyside version" />
   </component>
 </project>
