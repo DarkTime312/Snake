@@ -1,24 +1,30 @@
-from PySide6.QtGui import QPalette, QColor, Qt
-from PySide6.QtCore import QSize, QTimer
-from PySide6.QtWidgets import QWidget, QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsRectItem, \
-    QGridLayout, QLabel
 import sys
+from random import randint
+
+from PySide6.QtCore import QSize, QTimer
+from PySide6.QtGui import QPalette, QColor, Qt, QFont, QIcon
+from PySide6.QtWidgets import QWidget, QApplication, QMainWindow, QGridLayout, QLabel, QStackedLayout, QVBoxLayout, \
+    QPushButton
+from hPyT import *
+
 from settings import *
-from random import choice, randint
 from util import LimitedList
 
 
 class Board(QWidget):
     def __init__(self):
         super().__init__()
-        palette = self.palette()
-        palette.setColor(QPalette.ColorRole.Window, QColor("#242424"))
-        self.setPalette(palette)
-        self.setAutoFillBackground(True)  # Important to enable background color
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.set_background_color("#242424")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.setup_layout()
         self.start_game()
+
+    def set_background_color(self, color: str):
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(color))
+        self.setPalette(palette)
+        self.setAutoFillBackground(True)  # Important to enable background color
 
     def start_game(self):
         """
@@ -35,16 +41,18 @@ class Board(QWidget):
 
         This method can be called to start a new game or to reset the game after it ends.
         """
-        # Clear all existing widgets from the window
-        # for widget in self.winfo_children():
-        #     widget.destroy()
+        # Clear all existing snake parts from the window
+        for widget in self.findChildren(QLabel):
+            if widget.objectName() != 'score_lbl':
+                widget.deleteLater()
+
+        self.stacked_layout.setCurrentIndex(0)
 
         # Set the initial direction of the snake
         self.direction = 'right'
 
         # Create the apple and place it randomly on the grid
-        self.apple = QLabel()
-        self.apple.setStyleSheet(f"background-color: {APPLE_COLOR}")
+        self.apple = self.create_object(APPLE_COLOR)
 
         self.randomize_apple_position()
 
@@ -73,7 +81,7 @@ class Board(QWidget):
         self.timer.timeout.connect(self.movement)
 
         # Start the snake's movement
-        self.movement()
+        self.timer.start()
 
     def movement(self):
         """
@@ -112,7 +120,7 @@ class Board(QWidget):
             self.handle_apple_collision()
 
             # Update the position of the snake's head on the grid
-            self.layout().addWidget(self.snake_head, self.row, self.column)
+            self.grid_layout.addWidget(self.snake_head, self.row, self.column)
 
             # Update the positions of the snake's body parts
             self.update_body_positions(cur_row=self.row,
@@ -120,8 +128,6 @@ class Board(QWidget):
                                        old_row=old_row,
                                        old_col=old_column)
 
-            # Schedule the next movement after a delay (self.refresh_speed)
-            self.timer.start()
         else:
             # If the game cannot continue, trigger the game over sequence
             self.game_over()
@@ -140,16 +146,8 @@ class Board(QWidget):
            The button is positioned below the game over message and is linked to
            the start_game method.
         """
-        self.close()
-        # ctk.CTkLabel(self,
-        #              text=f'Game Over, record = {self.snake_body_length}',
-        #              font=('helvetica', 30, 'bold')).place(relx=0.5, rely=0.5, anchor='center')
-        # ctk.CTkButton(self,
-        #               text='Play Again!',
-        #               command=self.start_game,
-        #               text_color='black',
-        #               font=('B Titr', 25, 'bold')
-        #               ).place(relx=0.5, rely=0.6, anchor='center')
+        self.lbl_score.setText(f'Game Over, record = {self.snake_body_length}')
+        self.stacked_layout.setCurrentIndex(1)
 
     def update_body_positions(self, cur_row, cur_col, old_row, old_col):
         """
@@ -177,7 +175,7 @@ class Board(QWidget):
         last = self.body_objects.pop()
         self.body_objects.insert(0, last)
         self.body_positions.add((cur_row, cur_col))
-        self.layout().addWidget(self.body_objects[0], old_row, old_col)
+        self.grid_layout.addWidget(self.body_objects[0], old_row, old_col)
 
     def handle_apple_collision(self):
         """
@@ -201,10 +199,11 @@ class Board(QWidget):
             self.body_positions.max_size = self.snake_body_length
             self.create_body_parts(number=1)
 
-            self.layout().removeWidget(self.apple)
+            self.grid_layout.removeWidget(self.apple)
 
             self.randomize_apple_position()
             self.refresh_speed -= 5
+            self.timer.setInterval(self.refresh_speed)
 
     def can_game_continue(self):
         """
@@ -239,15 +238,15 @@ class Board(QWidget):
 
         # Place body parts on the grid
         for body_part, (row, column) in zip(self.body_objects, self.body_positions):
-            self.layout().addWidget(body_part, row, column)
+            self.grid_layout.addWidget(body_part, row, column)
 
         # Place the snake's head on the grid
-        self.layout().addWidget(self.snake_head, self.row, self.column)
+        self.grid_layout.addWidget(self.snake_head, self.row, self.column)
 
-    def create_object(self, color: str):
-        object = QLabel()
-        object.setStyleSheet(f"background-color: {color}")
-        return object
+    def create_object(self, color: str) -> QLabel:
+        body_part = QLabel()
+        body_part.setStyleSheet(f"background-color: {color}")
+        return body_part
 
     def change_direction(self, direction=None):
         """
@@ -307,8 +306,6 @@ class Board(QWidget):
         elif event.key() == Qt.Key.Key_Left:
             self.change_direction('left')
 
-
-
     def randomize_apple_position(self):
         """
         Randomizes the position of the apple on the grid.
@@ -331,7 +328,7 @@ class Board(QWidget):
 
         # Place the apple at the randomly generated position on the grid
         # The 'grid' method is used to position the apple widget
-        self.layout().addWidget(self.apple, self.apple_row, self.apple_column)
+        self.grid_layout.addWidget(self.apple, self.apple_row, self.apple_column)
 
     def setup_layout(self):
         """
@@ -344,24 +341,53 @@ class Board(QWidget):
 
         :return: None
         """
+
+        self.stacked_layout = QStackedLayout()
+        first_layout_widget = QWidget()
+        second_layout_widget = QWidget()
+
+        self.stacked_layout.addWidget(first_layout_widget)
+        self.stacked_layout.addWidget(second_layout_widget)
+        self.setLayout(self.stacked_layout)
+
+        # Create additional layouts
+        self.grid_layout = QGridLayout()
+        second_layout = QVBoxLayout()
+
+        first_layout_widget.setLayout(self.grid_layout)
+        second_layout_widget.setLayout(second_layout)
+
+        # set up the grid layout
+        self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.grid_layout.setSpacing(0)
+
         number_of_rows = FIELDS[1]
         number_of_columns = FIELDS[0]
 
-        # Create a grid layout
-        grid_layout = QGridLayout()
-        grid_layout.setContentsMargins(0, 0, 0, 0)
-        grid_layout.setSpacing(0)
-
         # creating the rows
         for row in range(number_of_rows):
-            grid_layout.setRowStretch(row, 1)  # Set equal stretch factor
+            self.grid_layout.setRowStretch(row, 1)  # Set equal stretch factor
 
         # creating the columns
         for col in range(number_of_columns):
-            grid_layout.setColumnStretch(col, 1)  # Set equal stretch factor
+            self.grid_layout.setColumnStretch(col, 1)  # Set equal stretch factor
 
-        # Set the layout to the widget
-        self.setLayout(grid_layout)
+        # Create game over window widgets
+        self.lbl_score = QLabel()
+        self.lbl_score.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.lbl_score.setObjectName('score_lbl')
+        self.lbl_score.setStyleSheet("color: white")
+        self.lbl_score.setFont(QFont('helvetica', 30, QFont.Weight.Bold))
+
+        btn_play_again = QPushButton('Play again?')
+        btn_play_again.setFont(QFont('helvetica', 30, QFont.Weight.Bold))
+        btn_play_again.setFixedSize(250, 100)
+        btn_play_again.clicked.connect(self.start_game)
+        # Add these widgets to the layout
+        second_layout.addStretch()
+        second_layout.addWidget(self.lbl_score)
+        second_layout.addWidget(btn_play_again, alignment=Qt.AlignmentFlag.AlignCenter)
+        second_layout.addStretch()
 
     def create_body_parts(self, number: int = 1):
         """
@@ -398,10 +424,15 @@ class SnakeGame(QMainWindow):
     def __init__(self):
         super().__init__()
         self.resize(QSize(WINDOW_SIZE[0], WINDOW_SIZE[1]))
+        self.setWindowTitle('Snake Game')
+        self.set_titlebar_color()
+        self.setWindowIcon(QIcon('empty.ico'))
 
-        self.scene = Board()
-        self.setCentralWidget(self.scene)
-        # self.view = QGraphicsView(self.scene)
+        self.board = Board()
+        self.setCentralWidget(self.board)
+
+    def set_titlebar_color(self):
+        title_bar_color.set(self, '#000000')  # sets the titlebar color to white
 
 
 app = QApplication(sys.argv)
